@@ -1,0 +1,80 @@
+using UnityEngine;
+
+public class DayNightCycle : MonoBehaviour
+{
+    [Header("Time Settings")]
+    [Tooltip("Length of a full day in real-world seconds")]
+    public float dayLengthInSeconds = 120f;
+    [Range(0f, 1f)]
+    public float currentTimeOfDay = 0.25f; // 0 = Midnight, 0.25 = Dawn, 0.5 = Noon, 0.75 = Dusk
+
+    [Header("Lighting References")]
+    public Light sunLight;
+    public Gradient sunColor;
+    public AnimationCurve sunIntensity;
+
+    [Header("Rotation Settings")]
+    public Vector3 rotationAxis = new Vector3(1, 0, 0); // Rotates along the X axis
+
+    private float initialIntensity;
+
+    void Start()
+    {
+        if (sunLight != null)
+        {
+            initialIntensity = sunLight.intensity;
+        }
+    }
+
+    void Update()
+    {
+        UpdateTimer();
+        UpdateSunRotation();
+        UpdateSunAttributes();
+    }
+
+    private void UpdateTimer()
+    {
+        // Progress time linearly based on frame rates
+        currentTimeOfDay += Time.deltaTime / dayLengthInSeconds;
+
+        // Loop the day cycle back to 0 once it hits 1
+        if (currentTimeOfDay >= 1f)
+        {
+            currentTimeOfDay = 0f;
+        }
+    }
+
+    private void UpdateSunRotation()
+    {
+        // 1. Calculate the target angle based on time of day
+        float angle = (currentTimeOfDay * 360f) - 90f;
+
+        // 2. Rotate THIS object (the DayNightController parent) instead of the light
+        transform.localRotation = Quaternion.AngleAxis(angle, rotationAxis);
+
+        // 3. Make sure the child light is looking directly at the center pivot
+        if (sunLight != null)
+        {
+            sunLight.transform.LookAt(transform.position);
+        }
+    }
+
+
+    private void UpdateSunAttributes()
+    {
+        if (sunLight == null) return;
+
+        // Apply gradient colors (e.g., orange for sunset, bright yellow for noon)
+        if (sunColor != null)
+        {
+            sunLight.color = sunColor.Evaluate(currentTimeOfDay);
+        }
+
+        // Apply intensity curves (e.g., 0 at night, 1 at noon)
+        if (sunIntensity != null)
+        {
+            sunLight.intensity = initialIntensity * sunIntensity.Evaluate(currentTimeOfDay);
+        }
+    }
+}
